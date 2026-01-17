@@ -1,33 +1,104 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Click2Talk</title>
+  <meta charset="utf-8">
+  <title>Click2Talk - Direct Call</title>
 
-  <!-- keep your SDK CSS so elements exist -->
   <link rel="stylesheet" href="./webRTC/css/common.css?v=1634266640747">
   <link rel="stylesheet" href="./webRTC/css/main.css?v=1634266640747">
 
   <style>
-    /* make it just a small icon page */
-    body { margin:0; height:100vh; display:flex; align-items:center; justify-content:center; }
-    #callNow {
-      width:64px; height:64px; border-radius:50%;
-      border:none; cursor:pointer;
+    /* Small floating icon only */
+    #callNow{
+      position:fixed;
+      right:20px;
+      bottom:20px;
+      width:56px;
+      height:56px;
+      border-radius:50%;
+      border:none;
+      cursor:pointer;
       background:#22c55e;
-      display:flex; align-items:center; justify-content:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       box-shadow:0 12px 30px rgba(0,0,0,.25);
+      z-index:999999;
     }
-    #callNow img { width:28px; height:28px; }
-    /* hide the SDK panels */
-    #main, #reload, #calling { display:none !important; }
+    #callNow img{ width:26px; height:26px; }
+
+    /* Keep SDK UI loaded but invisible/off-screen */
+    #sdkHiddenHost{
+      position:fixed;
+      left:-10000px;
+      top:-10000px;
+      width:480px;
+      height:720px;
+      overflow:hidden;
+      opacity:0;
+      pointer-events:none;
+    }
   </style>
 </head>
+
 <body>
 
+<!-- ✅ The only thing user sees -->
 <button id="callNow" aria-label="Call now">
   <img src="./webRTC/images/call-btn-icon.png" alt="Call">
 </button>
+
+<!-- ✅ SDK DOM is loaded here (hidden) so main.js can bind correctly -->
+<div id="sdkHiddenHost" class="fx-embedded">
+
+  <div id="main" style="display:none">
+    <div class="main-title">
+      <img src="./webRTC/images/close.png" alt="" class="btn-close">
+    </div>
+
+    <div class="main-content">
+      <div class="item">
+        <div class="item-row">
+          <div id="microphone-text" class="label"></div>
+          <div id="audioSourceContainer" class="col-right">
+            <div id="audioSourceText" class="text"></div>
+            <img src="./webRTC/images/arrow-down.png" alt="" class="down-icon">
+            <div id="audioSource" class="select-box"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="item-row">
+          <div id="output-text" class="label"></div>
+          <div id="audioOutputContainer" class="col-right">
+            <div id="audioOutputText" class="text"></div>
+            <img src="./webRTC/images/arrow-down.png" alt="" class="down-icon">
+            <audio id="soundTest" src="./webRTC/sounds/SoundTest.ogg" loop></audio>
+            <div id="audioOutput" class="select-box"></div>
+          </div>
+        </div>
+        <video id="video" playsinline autoplay></video>
+      </div>
+
+      <!-- ✅ This is the real SDK call button that main.js uses -->
+      <div class="bottom-call-btn">
+        <img src="webRTC/images/call-btn-icon.png" alt="">
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="reload" style="display:none"></div>
+
+  <div id="calling" style="display:none">
+    <audio id="audioMix" autoplay></audio>
+    <div class="hangup-btn">
+      <img src="webRTC/images/hangup-icon.png" alt="" class="calling-btn-icon">
+    </div>
+  </div>
+
+</div>
 
 <!-- SDK scripts -->
 <script src="./jquery-3.6.0.min.js"></script>
@@ -37,32 +108,43 @@
 <script src="./webRTC/js/main.js?v=1634266640747"></script>
 
 <script>
-  // On user click, initialize then start call
+  async function waitFor(selector, timeoutMs = 5000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return null;
+  }
+
   document.getElementById("callNow").addEventListener("click", async () => {
     try {
-      // Some SDKs require device init first:
+      // 1) init devices if SDK exposes it
       if (typeof window.startDevice === "function") {
         await window.startDevice();
       }
 
-      // Try to trigger the SDK call button logic:
-      // (This is the green bar button in your UI)
-      const btn = document.querySelector(".bottom-call-btn");
-      if (btn) {
-        btn.click();
+      // 2) ensure call button exists
+      const callBtn = await waitFor(".bottom-call-btn", 5000);
+      if (!callBtn) {
+        alert("SDK call button not found. Check that .bottom-call-btn exists in call.html.");
         return;
       }
 
-      // Fallback: if SDK exposes a call function
-      if (typeof window.startCall === "function") {
-        window.startCall();
-        return;
-      }
+      // 3) some SDKs require main to be visible briefly
+      const main = document.getElementById("main");
+      if (main) main.style.display = "block";
 
-      alert("Call function not found. I need the function name from main.js.");
+      // 4) trigger the SDK call
+      callBtn.click();
+
+      // 5) hide again (optional)
+      setTimeout(() => { if (main) main.style.display = "none"; }, 500);
+
     } catch (e) {
       console.error(e);
-      alert("Error starting call. Open Console to see details.");
+      alert("Error starting call. Open Console for details.");
     }
   });
 </script>
