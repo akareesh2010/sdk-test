@@ -8,7 +8,23 @@
     <link rel="stylesheet" type="text/css" href="./webRTC/css/main.css?v=1634266640747">
 </head>
 <body class="fx-embedded">
-    <div id="main" style="display: none">
+    <script>
+  window.onerror = function (msg, url, line, col, err) {
+    document.body.innerHTML =
+      "<pre style='padding:16px;white-space:pre-wrap'>JS ERROR:\n" +
+      msg +
+      "\n" +
+      url +
+      ":" +
+      line +
+      ":" +
+      col +
+      "\n\n" +
+      (err && err.stack ? err.stack : "") +
+      "</pre>";
+  };
+</script>
+    <div id="main" style="display: block">
         <div class="main-title">
             <img src="./webRTC/images/close.png" alt="" class="btn-close">
         </div>
